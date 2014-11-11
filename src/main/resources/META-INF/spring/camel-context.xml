@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:camel="http://camel.apache.org/schema/spring"
+       xsi:schemaLocation="
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd" >
+
+    <bean id="bookDataSet" class="com.buildria.camel.examle.seda.BookDataSet" >
+        <property name="size" value="1000" />
+    </bean>
+
+    <bean id="seda-output" class="org.apache.camel.component.seda.SedaComponent" >
+        <property name="queueSize" value="10000" />
+    </bean>
+
+    <camelContext xmlns="http://camel.apache.org/schema/spring">
+
+        <threadPoolProfile id="MyDefaultThreadPool" defaultProfile="true"
+                   poolSize="100" maxPoolSize="100" maxQueueSize="10000"
+                   keepAliveTime="60" rejectedPolicy="CallerRuns" />
+        
+        <endpoint id="output_producer" uri="seda-output:output" />
+        <endpoint id="output_consumer01" uri="seda-output:output?multipleConsumers=true&amp;concurrentConsumers=2" />
+        <endpoint id="output_consumer02" uri="seda-output:output?multipleConsumers=true&amp;concurrentConsumers=2" />
+        <endpoint id="output_consumer03" uri="seda-output:output?multipleConsumers=true&amp;concurrentConsumers=2" />
+
+        <dataFormats>
+            <json id="jettison" library="XStream" />
+            <json id="gson" library="Gson" />
+            <json id="jackson" library="Jackson" />
+        </dataFormats>
+
+        <route>
+            <from uri="dataset:bookDataSet?produceDelay=1000" />
+            <to ref="output_producer" />
+        </route>
+
+        <route>
+            <from ref="output_consumer01" />
+            <log message="ルート1 $simple{body}" />
+            <delay>
+                <simple>100</simple>
+            </delay>
+            <marshal ref="jackson" />
+            <log message="jackson: $simple{body}" />
+        </route>
+
+        <route>
+            <from ref="output_consumer02" />
+            <log message="ルート2 $simple{body}" />
+            <delay>
+                <simple>100</simple>
+            </delay>
+            <marshal ref="gson" />
+            <log message="gson: $simple{body}" />
+        </route>
+
+        <route>
+            <from ref="output_consumer03" />
+            <log message="ルート3 $simple{body}" />
+            <delay>
+                <simple>100</simple>
+            </delay>
+            <marshal ref="jettison" />
+            <log message="jettison: $simple{body}" />
+        </route>
+
+    </camelContext>
+
+</beans>
